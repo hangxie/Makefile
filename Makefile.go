@@ -1,0 +1,82 @@
+.DEFAULT_GOAL=help
+
+# Required for globs to work correctly
+SHELL:=/bin/bash
+
+PKG_PREFIX  = github.com/hangxie/leetcode
+
+# go option
+CGO_ENABLED := 0
+GO          ?= go
+GOBIN       = $(shell go env GOPATH)/bin
+GOFLAGS     := -trimpath
+GOSOURCES   := $(shell find . -type f -name '*.go')
+LDFLAGS     := -w -s
+LDFLAGS     += -extldflags "-static"
+
+.EXPORT_ALL_VARIABLES:
+
+.PHONY: all
+all: go-mod tools format lint test  ## Build all common targets
+
+.PHONY: format
+format: tools  ## Format all go code
+	@echo "==> Formatting all go code"
+	@$(GOBIN)/gofumpt -w -extra $(GOSOURCES)
+	@$(GOBIN)/goimports -w -local $(PKG_PREFIX) $(GOSOURCES)
+
+.PHONY: lint
+lint: tools  ## Run static code analysis
+	@echo "==> Running static code analysis"
+	@$(GOBIN)/golangci-lint cache clean
+	@$(GOBIN)/golangci-lint run --timeout 5m ./...
+	@gocyclo -over 15 . > /tmp/gocyclo.output; \
+		if [[ -s /tmp/gocyclo.output ]]; then \
+			echo functions with gocyclo score higher than 15; \
+			cat /tmp/gocyclo.output | sed 's/^/    /'; \
+			false; \
+		fi
+
+.PHONY: go-mod
+go-mod:  ## Install prerequisite for build
+	@echo "==> Installing prerequisite for build"
+	@go mod tidy
+
+.PHONY: tools
+tools:  ## Install build tools
+	@echo "==> Installing build tools"
+	@(cd /tmp; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		go install github.com/jstemmer/go-junit-report/v2@latest; \
+		go install mvdan.cc/gofumpt@latest; \
+		go install github.com/fzipp/gocyclo/cmd/gocyclo@latest; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+	)
+
+.PHONY: clean
+clean:  ## Clean up the build dirs
+	@echo "==> Cleaning up build dirs"
+	@rm -rf build
+
+.PHONY: test
+test: go-mod tools  ## Run unit tests
+	@echo "==> Running unit tests"
+	@mkdir -p build/test build/junit
+	@set -euo pipefail ; \
+		CGO_ENABLED=1 go test -race -count 1 -trimpath -coverprofile=build/test/cover.out ./... \
+			| tee build/test/go-test.output ; \
+		go tool cover -html=build/test/cover.out -o build/test/coverage.html ; \
+		go tool cover -func=build/test/cover.out -o build/test/coverage.txt ; \
+		cat build/test/go-test.output | $(GOBIN)/go-junit-report > build/junit/junit.xml ; \
+		cat build/test/coverage.txt
+
+.PHONY: bench
+bench: go-mod  ## Run performance tests
+	@echo "==> Running performance tests"
+	@go test -bench . -count 1 -cpu 1 -benchtime 1000x -benchmem ./...
+
+.PHONY: help
+help:  ## Print list of Makefile targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	  cut -d ":" -f1- | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

@@ -1,0 +1,47 @@
+.DEFAULT_GOAL=help
+
+# Required for globs to work correctly
+SHELL:=/bin/bash
+
+.EXPORT_ALL_VARIABLES:
+
+.PHONY: all
+all: tools format lint test  ## Build all common targets
+
+.PHONY: format
+format:  ## Format all python code
+	@echo "==> Formatting all python code"
+	@pipenv run black --line-length=79 .
+	@pipenv run isort --profile black .
+
+.PHONY: lint
+lint:  ## Run static code analysis
+	@echo "==> Running static code analysis"
+	@echo "==> Running flake8 ..."
+	@pipenv run flake8 --ignore E203,W503 .
+	@echo "==> Running pylint ..."
+	@pipenv run pylint --disable too-few-public-methods,duplicate-code .
+	@echo "==> Running mypy ..."
+	@pipenv run mypy .
+
+.PHONY: tools
+tools:  ## Install build tools
+	@echo "==> Installing build tools"
+	@pipenv --python 3.10
+	@pipenv install --dev
+
+.PHONY: test
+test:  ## Run unit tests
+	@echo "==> Running unit tests"
+	@pipenv run pytest -v --cov --cov-report=term --cov-report=html:build/ .
+
+.PHONY: clean
+clean:  ## clean up temporary files
+	@echo "==> Removing temporary files from build and test"
+	@rm -rf .coverage .mypy_cache .pytest_cache __pycache__ build
+
+.PHONY: help
+help:  ## Print list of Makefile targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	  cut -d ":" -f1- | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
