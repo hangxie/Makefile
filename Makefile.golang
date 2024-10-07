@@ -53,6 +53,12 @@ tools:  ## Install build tools
 		go install golang.org/x/tools/cmd/goimports@latest; \
 	)
 
+build: go-mod  ## Build locally for local os/arch
+	@echo "==> Building executable"
+	@mkdir -p $(BUILD_DIR)
+	@CGO_ENABLED=$(CGO_ENABLED) \
+        $(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o $(BUILD_DIR) ./
+
 .PHONY: clean
 clean:  ## Clean up the build dirs
 	@echo "==> Cleaning up build dirs"
