@@ -3,7 +3,8 @@
 # Required for globs to work correctly
 SHELL:=/bin/bash
 
-PKG_PREFIX  = github.com/hangxie/leetcode
+PKG_PREFIX  = github.com/CHANGEME/CHANGEME
+EXEC_NAME  := CHANGEME
 
 # go option
 CGO_ENABLED := 0
@@ -20,17 +21,17 @@ LDFLAGS     += -extldflags "-static"
 all: go-mod tools format lint test  ## Build all common targets
 
 .PHONY: format
-format: tools  ## Format all go code
+format:  ## Format all go code
 	@echo "==> Formatting all go code"
 	@$(GOBIN)/gofumpt -w -extra $(GOSOURCES)
 	@$(GOBIN)/goimports -w -local $(PKG_PREFIX) $(GOSOURCES)
 
 .PHONY: lint
-lint: tools  ## Run static code analysis
+lint:  ## Run static code analysis
 	@echo "==> Running static code analysis"
 	@$(GOBIN)/golangci-lint cache clean
 	@$(GOBIN)/golangci-lint run --timeout 5m ./...
-	@gocyclo -over 15 . > /tmp/gocyclo.output; \
+	@$(GOBIN)/gocyclo -over 15 . > /tmp/gocyclo.output; \
 		if [[ -s /tmp/gocyclo.output ]]; then \
 			echo functions with gocyclo score higher than 15; \
 			cat /tmp/gocyclo.output | sed 's/^/    /'; \
@@ -55,9 +56,8 @@ tools:  ## Install build tools
 
 build: go-mod  ## Build locally for local os/arch
 	@echo "==> Building executable"
-	@mkdir -p $(BUILD_DIR)
 	@CGO_ENABLED=$(CGO_ENABLED) \
-        $(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o $(BUILD_DIR) ./
+        $(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o build/$(EXEC_NAME) ./
 
 .PHONY: clean
 clean:  ## Clean up the build dirs
@@ -65,14 +65,14 @@ clean:  ## Clean up the build dirs
 	@rm -rf build
 
 .PHONY: test
-test: go-mod tools  ## Run unit tests
+test: go-mod  ## Run unit tests
 	@echo "==> Running unit tests"
 	@mkdir -p build/test build/junit
 	@set -euo pipefail ; \
-		CGO_ENABLED=1 go test -race -count 1 -trimpath -coverprofile=build/test/cover.out ./... \
+		CGO_ENABLED=1 go test -race -count 1 -trimpath -coverprofile=build/test/coverage.out ./... \
 			| tee build/test/go-test.output ; \
-		go tool cover -html=build/test/cover.out -o build/test/coverage.html ; \
-		go tool cover -func=build/test/cover.out -o build/test/coverage.txt ; \
+		go tool cover -html=build/test/coverage.out -o build/test/coverage.html ; \
+		go tool cover -func=build/test/coverage.out -o build/test/coverage.txt ; \
 		cat build/test/go-test.output | $(GOBIN)/go-junit-report > build/junit/junit.xml ; \
 		cat build/test/coverage.txt
 
