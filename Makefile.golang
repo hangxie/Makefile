@@ -3,17 +3,17 @@
 # Required for globs to work correctly
 SHELL:=/bin/bash
 
-PKG_PREFIX  = github.com/CHANGEME/CHANGEME
-EXEC_NAME  := CHANGEME
+PKG_PREFIX	= github.com/CHANGEME/CHANGEME
+EXEC_NAME	:= CHANGEME
 
 # go option
 CGO_ENABLED := 0
-GO          ?= go
-GOBIN       = $(shell go env GOPATH)/bin
-GOFLAGS     := -trimpath
-GOSOURCES   := $(shell find . -type f -name '*.go')
-LDFLAGS     := -w -s
-LDFLAGS     += -extldflags "-static"
+GO			?= go
+GOBIN		= $(shell go env GOPATH)/bin
+GOFLAGS		:= -trimpath
+GOSOURCES	:= $(shell find . -type f -name '*.go')
+LDFLAGS		:= -w -s
+LDFLAGS		+= -extldflags "-static"
 
 .EXPORT_ALL_VARIABLES:
 
@@ -30,7 +30,9 @@ format:  ## Format all go code
 lint:  ## Run static code analysis
 	@echo "==> Running static code analysis"
 	@$(GOBIN)/golangci-lint cache clean
-	@$(GOBIN)/golangci-lint run --timeout 5m ./...
+	@$(GOBIN)/golangci-lint run ./... \
+		--timeout 5m \
+		--exclude-use-default=false
 	@$(GOBIN)/gocyclo -over 15 . > /tmp/gocyclo.output; \
 		if [[ -s /tmp/gocyclo.output ]]; then \
 			echo functions with gocyclo score higher than 15; \
@@ -57,7 +59,7 @@ tools:  ## Install build tools
 build: go-mod  ## Build locally for local os/arch
 	@echo "==> Building executable"
 	@CGO_ENABLED=$(CGO_ENABLED) \
-        $(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o build/$(EXEC_NAME) ./
+		$(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o build/$(EXEC_NAME) ./
 
 .PHONY: clean
 clean:  ## Clean up the build dirs
@@ -84,5 +86,5 @@ bench: go-mod  ## Run performance tests
 .PHONY: help
 help:  ## Print list of Makefile targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-	  cut -d ":" -f1- | \
-	  awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+		cut -d ":" -f1- | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
