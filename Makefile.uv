@@ -1,0 +1,44 @@
+.DEFAULT_GOAL=help
+
+# Required for globs to work correctly
+SHELL:=/bin/bash
+
+.PHONY: all
+all: tools format lint test  ## Build all common targets
+
+.PHONY: format
+format:  ## Format all python code
+	@echo "==> Formatting all python code"
+	@uv run ruff format .
+
+.PHONY: lint
+lint:  ## Run static code analysis
+	@echo "==> Running static code analysis"
+	@echo "==> Running ruff check ..."
+	@uv run ruff check .
+	@echo "==> Running mypy ..."
+	@uv run mypy .
+
+.PHONY: tools
+tools:  ## Install build tools
+	@echo "==> Installing build tools"
+	@uv sync --dev
+
+.PHONY: test
+test:  ## Run unit tests
+	@echo "==> Running unit tests"
+	@uv run pytest
+
+.PHONY: clean
+clean:  ## clean up temporary files
+	@echo "==> Removing temporary files from build and test"
+	@# purposely deal with .venv under current dir to avoid excessive redo venv
+	@for TEMP in .venv .coverage .mypy_cache .pytest_cache .ruff_cache __pycache__ build ; do \
+		find . -name $${TEMP} | xargs rm -rf ; \
+	done
+
+.PHONY: help
+help:  ## Print list of Makefile targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	  cut -d ":" -f1- | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
