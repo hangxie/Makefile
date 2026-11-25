@@ -3,6 +3,9 @@
 # Required for globs to work correctly
 SHELL:=/bin/bash
 
+# all's steps share files and the venv: format rewrites what lint and test read
+.NOTPARALLEL:
+
 .PHONY: all
 all: dev format lint test  ## Build all common targets
 
@@ -43,10 +46,9 @@ check: lint test  ## Lint and test without changing files (for CI)
 .PHONY: clean
 clean:  ## clean up temporary files
 	@echo "==> Removing temporary files from build and test"
-	@# purposely deal with .venv under current dir to avoid excessive redo venv
-	@for TEMP in .venv .coverage .mypy_cache .pytest_cache .ruff_cache __pycache__ build ; do \
-		find . -name $${TEMP} | xargs rm -rf ; \
-	done
+	@rm -rf -- .venv .coverage build
+	@find . \( -name .mypy_cache -o -name .pytest_cache -o -name .ruff_cache -o -name __pycache__ \) \
+		-type d -prune -exec rm -rf -- {} +
 
 .PHONY: help
 help:  ## Print list of Makefile targets
