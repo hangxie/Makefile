@@ -4,30 +4,41 @@
 SHELL:=/bin/bash
 
 .PHONY: all
-all: tools format lint test  ## Build all common targets
+all: dev format lint test  ## Build all common targets
 
 .PHONY: format
-format:  ## Format all python code
+format:  ## Format all python code and apply safe lint fixes
 	@echo "==> Formatting all python code"
-	@uv run ruff format .
+	@uv run --locked ruff format .
+	@uv run --locked ruff check --fix .
 
 .PHONY: lint
 lint:  ## Run static code analysis
 	@echo "==> Running static code analysis"
+	@echo "==> Running ruff format --check ..."
+	@uv run --locked ruff format --check .
 	@echo "==> Running ruff check ..."
-	@uv run ruff check .
+	@uv run --locked ruff check .
 	@echo "==> Running mypy ..."
-	@uv run mypy .
+	@uv run --locked mypy .
 
-.PHONY: tools
-tools:  ## Install build tools
-	@echo "==> Installing build tools"
-	@uv sync --dev
+.PHONY: dev
+dev:  ## Install the development environment (.venv) from uv.lock
+	@echo "==> Installing the development environment"
+	@uv sync --dev --locked
+
+.PHONY: lock
+lock:  ## Re-resolve uv.lock after changing pyproject.toml
+	@echo "==> Re-resolving uv.lock"
+	@uv lock
 
 .PHONY: test
 test:  ## Run unit tests
 	@echo "==> Running unit tests"
-	@uv run pytest
+	@uv run --locked pytest
+
+.PHONY: check
+check: lint test  ## Lint and test without changing files (for CI)
 
 .PHONY: clean
 clean:  ## clean up temporary files
